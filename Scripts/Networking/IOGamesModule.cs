@@ -8,7 +8,7 @@ using Barebones.Networking;
 
 public class IOGamesModule : ServerModuleBehaviour
 {
-    public const string SpawnFirstRoomKey = "SpawnFirstRoom";
+    public const string IsFirstRoomKey = "SpawnFirstRoom";
 
     public SceneField scene;
     public bool spawnSceneInEditor = false;
@@ -40,6 +40,11 @@ public class IOGamesModule : ServerModuleBehaviour
     {
         if (Msf.Args.IsProvided(Msf.Args.Names.LoadScene))
             SceneManager.LoadScene(Msf.Args.LoadScene);
+    }
+
+    private void Update()
+    {
+        
     }
 
     public override void Initialize(IServer server)
@@ -86,7 +91,7 @@ public class IOGamesModule : ServerModuleBehaviour
             { MsfDictKeys.MapName, sceneName },
             { MsfDictKeys.MaxPlayers, maxPlayers.ToString() },
             { MsfDictKeys.IsPublic, "true" },
-            { SpawnFirstRoomKey, spawnFirstRoom.ToString() }
+            { IsFirstRoomKey, (!spawnFirstRoom).ToString() }
         };
     }
 }

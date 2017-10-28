@@ -82,6 +82,8 @@ public class IOGamesRoom : NetworkBehaviour
     public NetworkManager networkManager;
     public RoomController roomController;
 
+    protected bool isFirstRoom;
+
     protected virtual void Awake()
     {
         networkManager = networkManager ?? FindObjectOfType<NetworkManager>();
@@ -158,6 +160,9 @@ public class IOGamesRoom : NetworkBehaviour
 
             if (prop.ContainsKey(MsfDictKeys.MapName))
                 mapName = prop[MsfDictKeys.MapName];
+
+            if (prop.ContainsKey(IOGamesModule.IsFirstRoomKey))
+                isFirstRoom = bool.Parse(prop[IOGamesModule.IsFirstRoomKey]);
         }
 
         // Override the public address
@@ -346,14 +351,15 @@ public class IOGamesRoom : NetworkBehaviour
         peersByConnectionId.Remove(peerInfo.connection.connectionId);
         peersByPeerId.Remove(peerInfo.peerId);
 
+        if (!isFirstRoom && terminateWhenLastPlayerQuits && peersByPeerId.Count == 0)
+            Application.Quit();
+
         if (onPlayerLeft != null)
             onPlayerLeft.Invoke(peerInfo);
 
+        Debug.LogError("OnPlayerLeft " + peerInfo.peerId);
         // Notify controller that the player has left
         roomController.PlayerLeft(peerInfo.peerId);
-
-        if (terminateWhenLastPlayerQuits && peersByPeerId.Count == 0)
-            Application.Quit();
     }
 
     private void OnDisconnectedFromMaster()
@@ -381,7 +387,7 @@ public class IOGamesRoom : NetworkBehaviour
         while (true)
         {
             yield return new WaitForSeconds(1);
-            if (!Msf.Connection.IsConnected)
+            if (!isFirstRoom && !Msf.Connection.IsConnected)
             {
                 Logs.Error("Terminating game server, no connection");
                 Application.Quit();
@@ -400,7 +406,7 @@ public class IOGamesRoom : NetworkBehaviour
         while (true)
         {
             yield return new WaitForSeconds(timeout);
-            if (peersByPeerId.Count <= 0)
+            if (!isFirstRoom && peersByPeerId.Count <= 0)
             {
                 Logs.Error("Terminating game server because it's empty at the time of an interval check.");
                 Application.Quit();
@@ -416,14 +422,14 @@ public class IOGamesRoom : NetworkBehaviour
     private IEnumerator StartStartedTimeout(float timeout)
     {
         yield return new WaitForSeconds(timeout);
-        if (!IsRoomRegistered)
+        if (!isFirstRoom && !IsRoomRegistered)
             Application.Quit();
     }
 
     private IEnumerator StartFirstPlayerTimeout(float timeout)
     {
         yield return new WaitForSeconds(timeout);
-        if (!hasFirstPlayerShowedUp)
+        if (!isFirstRoom && !hasFirstPlayerShowedUp)
         {
             Logs.Error("Terminated game server because first player didn't show up");
             Application.Quit();
