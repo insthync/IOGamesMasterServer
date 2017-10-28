@@ -8,6 +8,8 @@ using Barebones.Networking;
 
 public class IOGamesModule : ServerModuleBehaviour
 {
+    public const string SpawnFirstRoomKey = "SpawnFirstRoom";
+
     public SceneField scene;
     public bool spawnSceneInEditor = false;
     public string roomName = "Battle-";
@@ -16,6 +18,7 @@ public class IOGamesModule : ServerModuleBehaviour
     private SpawnersModule spawnersModule;
     private bool sceneSpawned = false;
     private uint sceneCounter = 0;
+    private bool spawnFirstRoom = false;
 
     private void Awake()
     {
@@ -71,6 +74,7 @@ public class IOGamesModule : ServerModuleBehaviour
     void SpawnScene()
     {
         spawnersModule.Spawn(GenerateSceneSpawnInfo(scene)).WhenDone(task => Logs.Info(scene + " scene spawn status: " + task.Status));
+        spawnFirstRoom = true;
     }
 
     public Dictionary<string, string> GenerateSceneSpawnInfo(string sceneName)
@@ -79,8 +83,10 @@ public class IOGamesModule : ServerModuleBehaviour
         {
             { MsfDictKeys.RoomName, roomName + (++sceneCounter) },
             { MsfDictKeys.SceneName, sceneName },
+            { MsfDictKeys.MapName, sceneName },
             { MsfDictKeys.MaxPlayers, maxPlayers.ToString() },
             { MsfDictKeys.IsPublic, "true" },
+            { SpawnFirstRoomKey, spawnFirstRoom.ToString() }
         };
     }
 }
