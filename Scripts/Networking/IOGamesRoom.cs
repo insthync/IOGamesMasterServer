@@ -356,8 +356,7 @@ public class IOGamesRoom : NetworkBehaviour
 
         if (onPlayerLeft != null)
             onPlayerLeft.Invoke(peerInfo);
-
-        Debug.LogError("OnPlayerLeft " + peerInfo.peerId);
+        
         // Notify controller that the player has left
         roomController.PlayerLeft(peerInfo.peerId);
     }

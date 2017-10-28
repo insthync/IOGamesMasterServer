@@ -9,18 +9,23 @@ using Barebones.Networking;
 public class IOGamesModule : ServerModuleBehaviour
 {
     public const string IsFirstRoomKey = "SpawnFirstRoom";
+    public const string AssignPortKey = "AssignPort";
 
     public SceneField scene;
     public bool spawnSceneInEditor = false;
     public string roomName = "Battle-";
     public int maxPlayers = 2;
     public int playersAmountToCreateNewRoom = 1;
+    public float countPlayersToCreateNewRoomDuration = 3;
+    public int startPort = 1500;
     private RoomsModule roomsModule;
     private SpawnersModule spawnersModule;
-    private bool sceneSpawned = false;
     private uint sceneCounter = 0;
     private bool spawnFirstRoom = false;
     private bool spawnTaskDone = false;
+    private int spawningPort = -1;
+    private int portCounter = -1;
+    private Queue<int> freePorts = new Queue<int>();
 
     private void Awake()
     {
@@ -37,6 +42,8 @@ public class IOGamesModule : ServerModuleBehaviour
         // Register dependencies
         AddDependency<RoomsModule>();
         AddDependency<SpawnersModule>();
+        spawningPort = startPort;
+        portCounter = startPort;
     }
 
     private void Start()
@@ -52,7 +59,7 @@ public class IOGamesModule : ServerModuleBehaviour
     {
         while (true)
         {
-            yield return new WaitForSeconds(1);
+            yield return new WaitForSeconds(countPlayersToCreateNewRoomDuration);
             if (roomsModule != null && spawnersModule != null && spawnTaskDone)
             {
                 var rooms = roomsModule.GetAllRooms().ToList();
@@ -84,17 +91,35 @@ public class IOGamesModule : ServerModuleBehaviour
     {
         if (spawnersModule == null)
             return;
-        
+
         var task = spawnersModule.Spawn(GenerateSceneSpawnInfo(scene));
         if (task != null)
         {
             spawnTaskDone = false;
-            task.WhenDone(t => {
+            if (freePorts.Count > 0)
+                spawningPort = freePorts.Dequeue();
+            else
+            {
+                ++portCounter;
+                spawningPort = portCounter;
+            }
+            task.WhenDone(t =>
+            {
                 Logs.Info(scene + " scene spawn status: " + t.Status);
                 spawnTaskDone = true;
             });
+            task.StatusChanged += (SpawnStatus status) =>
+            {
+                if (status == SpawnStatus.Killed)
+                    FreePort(int.Parse(task.Properties[AssignPortKey]));
+            };
             spawnFirstRoom = true;
         }
+    }
+
+    private void FreePort(int port)
+    {
+        freePorts.Enqueue(port);
     }
 
     public Dictionary<string, string> GenerateSceneSpawnInfo(string sceneName)
@@ -106,7 +131,8 @@ public class IOGamesModule : ServerModuleBehaviour
             { MsfDictKeys.MapName, sceneName },
             { MsfDictKeys.MaxPlayers, maxPlayers.ToString() },
             { MsfDictKeys.IsPublic, "true" },
-            { IsFirstRoomKey, (!spawnFirstRoom).ToString() }
+            { IsFirstRoomKey, (!spawnFirstRoom).ToString() },
+            { AssignPortKey, spawningPort.ToString() },
         };
     }
 }

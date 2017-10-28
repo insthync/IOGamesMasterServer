@@ -15,45 +15,45 @@ public class IOGamesServerStarter : MonoBehaviour
         Type = HelpBoxType.Info
     };
 
-    public bool WarnIfNoConnectionObject = true;
+    public bool warnIfNoConnectionObject = true;
 
-    public LogLevel LogLevel = LogLevel.Info;
+    public LogLevel logLevel = LogLevel.Info;
 
-    public NetworkManager NetworkManager;
+    public GameNetworkManagerWithMsf networkManager;
 
     [Header("If Spawned Process")]
     [Tooltip("If set to true and if this process is spawned, it will try to " +
              "automatically start the game server. ")]
-    public bool AutoStartSpawned = true;
+    public bool autoStartSpawned = true;
 
     [Header("If Testing In Editor")]
-    public bool AutoStartInEditor = true;
-    public bool StartServerAsHost = true;
-    public bool AutoJoinRoom = true;
-    public bool StartMaster = true;
-    public MasterServerBehaviour MasterServerObject;
+    public bool autoStartInEditor = true;
+    public bool startServerAsHost = true;
+    public bool autoJoinRoom = true;
+    public bool startMaster = true;
+    public MasterServerBehaviour masterServerObject;
 
     #endregion
 
-    protected bool IsStartingEditorServer;
+    protected bool isStartingEditorServer;
 
-    public BmLogger Logger = Msf.Create.Logger(typeof(UnetServerStarter).Name);
+    public BmLogger logger = Msf.Create.Logger(typeof(UnetServerStarter).Name);
 
     protected virtual void Awake()
     {
-        Logger.LogLevel = LogLevel;
+        logger.LogLevel = logLevel;
 
-        MasterServerObject = MasterServerObject ?? FindObjectOfType<MasterServerBehaviour>();
-        NetworkManager = NetworkManager ?? FindObjectOfType<NetworkManager>();
+        masterServerObject = masterServerObject ?? FindObjectOfType<MasterServerBehaviour>();
+        networkManager = networkManager ?? FindObjectOfType<GameNetworkManagerWithMsf>();
 
         var connection = GetConnection();
 
         // Listen to the connected event
         connection.AddConnectionListener(OnConnectedToMaster, true);
 
-        if (WarnIfNoConnectionObject && FindObjectOfType<ConnectionToMaster>() == null)
+        if (warnIfNoConnectionObject && FindObjectOfType<ConnectionToMaster>() == null)
         {
-            Logger.Warn("No connection object was found in the scene. Ignore the warning, if you're connecting " +
+            logger.Warn("No connection object was found in the scene. Ignore the warning, if you're connecting " +
                         "to server manually.");
         }
 
@@ -63,29 +63,29 @@ public class IOGamesServerStarter : MonoBehaviour
 
     protected virtual void Start()
     {
-        if (ShouldStartServerInEditor() && StartMaster)
+        if (ShouldStartServerInEditor() && startMaster)
         {
             // If we need to start the master server
-            if (MasterServerObject == null)
+            if (masterServerObject == null)
             {
-                Logger.Error("You have selected to start a master server, but there's no " +
+                logger.Error("You have selected to start a master server, but there's no " +
                              "master server object in the scene");
                 return;
             }
 
             // Enable master server object
-            MasterServerObject.gameObject.SetActive(true);
+            masterServerObject.gameObject.SetActive(true);
 
             // If auto start in editor is not selected
-            if (!MasterServerObject.AutoStartInEditor)
-                MasterServerObject.StartServer();
+            if (!masterServerObject.AutoStartInEditor)
+                masterServerObject.StartServer();
         }
     }
 
     protected virtual void OnConnectedToMaster()
     {
         // Start the server if it's a spawned process
-        if (AutoStartSpawned && Msf.Server.Spawners.IsSpawnedProccess)
+        if (autoStartSpawned && Msf.Server.Spawners.IsSpawnedProccess)
         {
             // If this is a spawned process, and we want the game server to be started automatically
             StartSpawned();
@@ -94,7 +94,7 @@ public class IOGamesServerStarter : MonoBehaviour
 
         if (ShouldStartServerInEditor())
         {
-            IsStartingEditorServer = true;
+            isStartingEditorServer = true;
 
             // If we haven't received any access yet, we assume that we wan't to start a game server
             Logs.Info("AutoStartInEditor set to true and there's no Room access - " +
@@ -109,7 +109,7 @@ public class IOGamesServerStarter : MonoBehaviour
     {
         return !Msf.Client.Rooms.ForceClientMode
             && Msf.Runtime.IsEditor
-               && AutoStartInEditor
+               && autoStartInEditor
                && Msf.Client.Rooms.LastReceivedAccess == null;
     }
 
@@ -119,7 +119,7 @@ public class IOGamesServerStarter : MonoBehaviour
         {
             if (controller == null)
             {
-                Logger.Error("Failed to register a spawned process: " + error);
+                logger.Error("Failed to register a spawned process: " + error);
                 throw new Exception("Failed to register a spawned process: " + error);
             }
 
@@ -127,13 +127,19 @@ public class IOGamesServerStarter : MonoBehaviour
             IOGamesRoom.SpawnTaskController = controller;
 
             if (Msf.Args.IsProvided(Msf.Args.Names.WebGl))
-                NetworkManager.useWebSockets = true;
+                networkManager.useWebSockets = true;
 
             // Use the assigned port from cmd args
-            NetworkManager.networkPort = Msf.Args.AssignedPort;
+            // I have problems with Msf assigning port, I will find out better solution later
+
+            var prop = controller.Properties;
+            if (prop.ContainsKey(IOGamesModule.AssignPortKey))
+                networkManager.networkPort = int.Parse(prop[IOGamesModule.AssignPortKey]);
+            else
+                networkManager.networkPort = Msf.Args.AssignedPort;
 
             // Start the server
-            NetworkManager.StartServer();
+            networkManager.StartServerButQuitIfCannotListen();
         });
         return;
     }
@@ -142,16 +148,12 @@ public class IOGamesServerStarter : MonoBehaviour
     {
         // Connections will be managed by room accesses
         // Maximize this just in case
-        NetworkManager.maxConnections = 999;
+        networkManager.maxConnections = 999;
 
-        if (StartServerAsHost)
-        {
-            NetworkManager.StartHost();
-        }
+        if (startServerAsHost)
+            networkManager.StartHostButQuitIfCannotListen();
         else
-        {
-            NetworkManager.StartServer();
-        }
+            networkManager.StartServerButQuitIfCannotListen();
     }
 
     /// <summary>
@@ -159,38 +161,38 @@ public class IOGamesServerStarter : MonoBehaviour
     /// </summary>
     protected virtual void OnRoomRegistered(RoomController controller)
     {
-        if (IsStartingEditorServer && AutoJoinRoom)
+        if (isStartingEditorServer && autoJoinRoom)
         {
             //-------------------------
             // 1. Log into the server
-            Logger.Debug("Logging in as guest...");
+            logger.Debug("Logging in as guest...");
             Msf.Client.Auth.LogInAsGuest((accInfo, loginError) =>
             {
                 if (accInfo == null)
                 {
-                    Logger.Error("Failed to log in: " + loginError);
+                    logger.Error("Failed to log in: " + loginError);
                     return;
                 }
 
-                Logger.Debug("Logged in successfully");
+                logger.Debug("Logged in successfully");
 
                 //-------------------------
                 // 2. Get access to join the room
-                Logger.Debug("Retrieving room access ...");
+                logger.Debug("Retrieving room access ...");
                 Msf.Client.Rooms.GetAccess(controller.RoomId, (access, accessError) =>
                 {
                     if (access == null)
                     {
-                        Logger.Error("Failed to get the access to server: " + accessError);
+                        logger.Error("Failed to get the access to server: " + accessError);
                         return;
                     }
 
                     // We have the access, try to connect to room
-                    Logger.Debug("Access received: " + access);
+                    logger.Debug("Access received: " + access);
 
                     if (RoomConnector.Instance == null)
                     {
-                        Logger.Warn("RoomConnector was not found in the scene. Hopefully, " +
+                        logger.Warn("RoomConnector was not found in the scene. Hopefully, " +
                                     "you handle the  'Msf.Client.Rooms.AccessReceived' " +
                                     "event manually.");
                     }
