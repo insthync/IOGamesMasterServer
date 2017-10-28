@@ -10,23 +10,23 @@ public class UINetworkRoom : UIBase
     public Transform gameListContainer;
     private readonly List<UINetworkRoomEntry> entries = new List<UINetworkRoomEntry>();
 
-    protected IClientSocket Connection = Msf.Connection;
+    protected IClientSocket connection = Msf.Connection;
 
     protected override void Awake()
     {
         base.Awake();
         ClearEntries();
-        Connection.Connected += OnConnectedToMaster;
+        connection.Connected += OnConnectedToMaster;
     }
 
     void OnDestroy()
     {
-        Msf.Connection.Connected -= OnConnectedToMaster;
+        connection.Connected -= OnConnectedToMaster;
     }
 
     void OnEnable()
     {
-        if (Connection.IsConnected)
+        if (connection.IsConnected)
             RequestRooms();
     }
 
@@ -49,7 +49,7 @@ public class UINetworkRoom : UIBase
 
     void RequestRooms()
     {
-        if (!Connection.IsConnected)
+        if (!connection.IsConnected)
         {
             Logs.Error("Tried to request rooms, but no connection was set");
             return;
