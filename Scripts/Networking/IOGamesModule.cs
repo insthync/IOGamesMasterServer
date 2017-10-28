@@ -15,10 +15,12 @@ public class IOGamesModule : ServerModuleBehaviour
     public string roomName = "Battle-";
     public int maxPlayers = 2;
     public int playersAmountToCreateNewRoom = 1;
+    private RoomsModule roomsModule;
     private SpawnersModule spawnersModule;
     private bool sceneSpawned = false;
     private uint sceneCounter = 0;
     private bool spawnFirstRoom = false;
+    private bool spawnTaskDone = false;
 
     private void Awake()
     {
@@ -33,53 +35,66 @@ public class IOGamesModule : ServerModuleBehaviour
         DontDestroyOnLoad(gameObject);
 
         // Register dependencies
+        AddDependency<RoomsModule>();
         AddDependency<SpawnersModule>();
     }
 
     private void Start()
     {
+        spawnTaskDone = true;
         if (Msf.Args.IsProvided(Msf.Args.Names.LoadScene))
             SceneManager.LoadScene(Msf.Args.LoadScene);
+        else
+            StartCoroutine(StartSpawnServerRoutine());
     }
 
-    private void Update()
+    IEnumerator StartSpawnServerRoutine()
     {
-        
+        while (true)
+        {
+            yield return new WaitForSeconds(1);
+            if (roomsModule != null && spawnersModule != null && spawnTaskDone)
+            {
+                var rooms = roomsModule.GetAllRooms().ToList();
+                if (rooms.Count == 0)
+                {
+                    sceneCounter = 0;
+                    spawnFirstRoom = false;
+                    SpawnScene();
+                }
+                else
+                {
+                    var totalPlayers = 0;
+                    foreach (var room in rooms)
+                        totalPlayers += room.OnlineCount;
+                    if (Mathf.FloorToInt(totalPlayers / rooms.Count) >= playersAmountToCreateNewRoom)
+                        SpawnScene();
+                }
+            }
+        }
     }
 
     public override void Initialize(IServer server)
     {
+        roomsModule = server.GetModule<RoomsModule>();
         spawnersModule = server.GetModule<SpawnersModule>();
-        //----------------------------------------------
-        // Spawn game servers (zones)
-
-        // Find a spawner 
-        var spawner = spawnersModule.GetSpawners().FirstOrDefault();
-
-        if (spawner != null)
-        {
-            // We found a spawner we can use
-            SpawnScene();
-        }
-        else
-        {
-            // Spawners are not yet registered to the master, 
-            // so let's listen to an event and wait for them
-            spawnersModule.SpawnerRegistered += registeredSpawner =>
-            {
-                // Ignore if zones are already spawned
-                if (sceneSpawned) return;
-                // Spawn the zones
-                SpawnScene();
-                sceneSpawned = true;
-            };
-        }
     }
 
     void SpawnScene()
     {
-        spawnersModule.Spawn(GenerateSceneSpawnInfo(scene)).WhenDone(task => Logs.Info(scene + " scene spawn status: " + task.Status));
-        spawnFirstRoom = true;
+        if (spawnersModule == null)
+            return;
+        
+        var task = spawnersModule.Spawn(GenerateSceneSpawnInfo(scene));
+        if (task != null)
+        {
+            spawnTaskDone = false;
+            task.WhenDone(t => {
+                Logs.Info(scene + " scene spawn status: " + t.Status);
+                spawnTaskDone = true;
+            });
+            spawnFirstRoom = true;
+        }
     }
 
     public Dictionary<string, string> GenerateSceneSpawnInfo(string sceneName)
