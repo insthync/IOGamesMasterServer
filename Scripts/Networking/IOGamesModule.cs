@@ -12,7 +12,6 @@ public class IOGamesModule : ServerModuleBehaviour
     public const string AssignPortKey = "AssignPort";
 
     public SceneField scene;
-    public bool spawnSceneInEditor = false;
     public string roomName = "Battle-";
     public int maxPlayers = 2;
     public int playersAmountToCreateNewRoom = 1;
