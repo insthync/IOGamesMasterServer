@@ -70,6 +70,8 @@ public class IOGamesModule : ServerModuleBehaviour
                 }
                 else
                 {
+                    if (rooms.Count == 1)
+                        sceneCounter = 0;
                     var totalPlayers = 0;
                     foreach (var room in rooms)
                         totalPlayers += room.OnlineCount;
