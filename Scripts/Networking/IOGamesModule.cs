@@ -4,7 +4,6 @@ using System.Linq;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Barebones.MasterServer;
-using Barebones.Networking;
 
 public class IOGamesModule : ServerModuleBehaviour
 {
@@ -133,7 +132,7 @@ public class IOGamesModule : ServerModuleBehaviour
         spawnersModule = server.GetModule<SpawnersModule>();
     }
 
-    void SpawnScene(RoomInfo roomInfo, bool isFirstRoom)
+    public void SpawnScene(RoomInfo roomInfo, bool isFirstRoom)
     {
         if (spawnersModule == null)
             return;
@@ -176,8 +175,8 @@ public class IOGamesModule : ServerModuleBehaviour
             { MsfDictKeys.SceneName, info.scene.SceneName },
             { MsfDictKeys.MapName, info.scene.SceneName },
             { MsfDictKeys.MaxPlayers, info.maxPlayers.ToString() },
-            { MsfDictKeys.IsPublic, "true" },
-            { IsFirstRoomKey, (!isFirstRoom).ToString() },
+            { MsfDictKeys.IsPublic, true.ToString() },
+            { IsFirstRoomKey, isFirstRoom.ToString() },
             { AssignPortKey, spawningPort.ToString() },
             { RoomSpawnTypeKey, RoomSpawnTypeMaster },
         };
