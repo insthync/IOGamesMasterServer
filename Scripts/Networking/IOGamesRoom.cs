@@ -83,6 +83,7 @@ public class IOGamesRoom : NetworkBehaviour
     public RoomController roomController;
 
     protected bool isFirstRoom;
+    protected string roomType;
 
     protected virtual void Awake()
     {
@@ -163,6 +164,9 @@ public class IOGamesRoom : NetworkBehaviour
 
             if (prop.ContainsKey(IOGamesModule.IsFirstRoomKey))
                 isFirstRoom = bool.Parse(prop[IOGamesModule.IsFirstRoomKey]);
+
+            if (prop.ContainsKey(IOGamesModule.RoomSpawnTypeKey))
+                roomType = prop[IOGamesModule.RoomSpawnTypeKey];
         }
 
         // Override the public address
@@ -176,15 +180,6 @@ public class IOGamesRoom : NetworkBehaviour
     public virtual void RegisterRoom()
     {
         var isUsingLobby = Msf.Args.IsProvided(Msf.Args.Names.LobbyId);
-
-        var properties = SpawnTaskController != null
-            ? SpawnTaskController.Properties
-            : new Dictionary<string, string>();
-
-        if (!properties.ContainsKey(MsfDictKeys.MapName))
-            properties[MsfDictKeys.MapName] = mapName;
-
-        properties[MsfDictKeys.SceneName] = SceneManager.GetActiveScene().name;
 
         // 1. Create options object
         var options = new RoomOptions()
@@ -202,12 +197,11 @@ public class IOGamesRoom : NetworkBehaviour
 
             Properties = new Dictionary<string, string>()
             {
-                {MsfDictKeys.MapName, mapName }, // Show the name of the map
-                {MsfDictKeys.SceneName, SceneManager.GetActiveScene().name} // Add the scene name
+                { MsfDictKeys.MapName, mapName },
+                { MsfDictKeys.SceneName, SceneManager.GetActiveScene().name },
+                { IOGamesModule.RoomSpawnTypeKey, roomType },
             }
         };
-
-        BeforeSendingRegistrationOptions(options, properties);
 
         // 2. Send a request to create a room
         Msf.Server.Rooms.RegisterRoom(options, (controller, error) =>
@@ -220,27 +214,9 @@ public class IOGamesRoom : NetworkBehaviour
 
             // Save the controller
             roomController = controller;
-
             logger.Debug("Room Created successfully. Room ID: " + controller.RoomId);
-
             OnRoomRegistered(controller);
         });
-    }
-
-    /// <summary>
-    /// Override this method, if you want to make some changes to registration options
-    /// </summary>
-    /// <param name="options">Room options, before sending them to register a room</param>
-    /// <param name="spawnProperties">Properties, which were provided when spawning the process</param>
-    protected virtual void BeforeSendingRegistrationOptions(RoomOptions options,
-        Dictionary<string, string> spawnProperties)
-    {
-        // You can override this method, and modify room registration options
-
-        // For example, you could copy some of the properties from spawn request,
-        // like this:
-        if (spawnProperties.ContainsKey("magicProperty"))
-            options.Properties["magicProperty"] = spawnProperties["magicProperty"];
     }
 
     /// <summary>

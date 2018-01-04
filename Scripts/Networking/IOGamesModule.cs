@@ -8,23 +8,44 @@ using Barebones.Networking;
 
 public class IOGamesModule : ServerModuleBehaviour
 {
+    public const string RoomSpawnTypeKey = "RoomSpawnType";
     public const string IsFirstRoomKey = "SpawnFirstRoom";
     public const string AssignPortKey = "AssignPort";
 
-    public SceneField scene;
-    public string roomName = "Battle-";
-    public int maxPlayers = 2;
-    public int playersAmountToCreateNewRoom = 1;
+    public const string RoomSpawnTypeMaster = "Master";
+    public const string RoomSpawnTypeUser = "User";
+
+    [System.Serializable]
+    public class RoomInfo
+    {
+        public SceneField scene;
+        public string roomName = "Battle-";
+        public int maxPlayers = 32;
+        public int playersAmountToCreateNewRoom = 24;
+    }
+
+    public class RoomCounter
+    {
+        public int roomCount = 0;
+        public int playerCount = 0;
+
+        public void ClearCounter()
+        {
+            roomCount = 0;
+            playerCount = 0;
+        }
+    }
+
+    public RoomInfo[] roomInfos;
     public float countPlayersToCreateNewRoomDuration = 3;
     public int startPort = 1500;
     private RoomsModule roomsModule;
     private SpawnersModule spawnersModule;
-    private uint sceneCounter = 0;
-    private bool spawnFirstRoom = false;
     private bool spawnTaskDone = false;
     private int spawningPort = -1;
     private int portCounter = -1;
-    private Queue<int> freePorts = new Queue<int>();
+    private readonly Queue<int> freePorts = new Queue<int>();
+    private readonly Dictionary<string, RoomCounter> roomCounts = new Dictionary<string, RoomCounter>();
 
     private void Awake()
     {
@@ -47,6 +68,16 @@ public class IOGamesModule : ServerModuleBehaviour
 
     private void Start()
     {
+        roomCounts.Clear();
+        foreach (var roomInfo in roomInfos)
+        {
+            var sceneName = roomInfo.scene.SceneName;
+            if (!roomCounts.ContainsKey(sceneName))
+            {
+                roomCounts[sceneName] = new RoomCounter();
+            }
+        }
+
         spawnTaskDone = true;
         if (Msf.Args.IsProvided(Msf.Args.Names.LoadScene))
             SceneManager.LoadScene(Msf.Args.LoadScene);
@@ -61,22 +92,36 @@ public class IOGamesModule : ServerModuleBehaviour
             yield return new WaitForSeconds(countPlayersToCreateNewRoomDuration);
             if (roomsModule != null && spawnersModule != null && spawnTaskDone)
             {
-                var rooms = roomsModule.GetAllRooms().ToList();
-                if (rooms.Count == 0)
+                // Clear room counter
+                foreach (var roomCount in roomCounts)
                 {
-                    sceneCounter = 0;
-                    spawnFirstRoom = false;
-                    SpawnScene();
+                    roomCounts[roomCount.Key].ClearCounter();
                 }
-                else
+
+                // Count room and players
+                var rooms = roomsModule.GetAllRooms().ToList();
+                foreach (var room in rooms)
                 {
-                    if (rooms.Count == 1)
-                        sceneCounter = 0;
-                    var totalPlayers = 0;
-                    foreach (var room in rooms)
-                        totalPlayers += room.OnlineCount;
-                    if (Mathf.FloorToInt(totalPlayers / rooms.Count) >= playersAmountToCreateNewRoom)
-                        SpawnScene();
+                    var sceneName = room.Options.Properties[MsfDictKeys.SceneName];
+                    if (roomCounts.ContainsKey(sceneName))
+                    {
+                        roomCounts[sceneName].roomCount += 1;
+                        roomCounts[sceneName].playerCount += room.OnlineCount;
+                    }
+                }
+
+                foreach (var roomInfo in roomInfos)
+                {
+                    var sceneName = roomInfo.scene.SceneName;
+                    if (roomCounts[sceneName].roomCount == 0)
+                    {
+                        SpawnScene(roomInfo, true);
+                    }
+                    else
+                    {
+                        if (Mathf.FloorToInt(roomCounts[sceneName].playerCount / rooms.Count) >= roomInfo.playersAmountToCreateNewRoom)
+                            SpawnScene(roomInfo, false);
+                    }
                 }
             }
         }
@@ -88,12 +133,12 @@ public class IOGamesModule : ServerModuleBehaviour
         spawnersModule = server.GetModule<SpawnersModule>();
     }
 
-    void SpawnScene()
+    void SpawnScene(RoomInfo roomInfo, bool isFirstRoom)
     {
         if (spawnersModule == null)
             return;
 
-        var task = spawnersModule.Spawn(GenerateSceneSpawnInfo(scene));
+        var task = spawnersModule.Spawn(GenerateSceneSpawnInfo(roomInfo, isFirstRoom));
         if (task != null)
         {
             spawnTaskDone = false;
@@ -106,7 +151,7 @@ public class IOGamesModule : ServerModuleBehaviour
             }
             task.WhenDone(t =>
             {
-                Logs.Info(scene + " scene spawn status: " + t.Status);
+                Logs.Info(roomInfo.scene + " scene spawn status: " + t.Status);
                 spawnTaskDone = true;
             });
             task.StatusChanged += (SpawnStatus status) =>
@@ -114,7 +159,6 @@ public class IOGamesModule : ServerModuleBehaviour
                 if (status == SpawnStatus.Killed)
                     FreePort(int.Parse(task.Properties[AssignPortKey]));
             };
-            spawnFirstRoom = true;
         }
     }
 
@@ -123,17 +167,19 @@ public class IOGamesModule : ServerModuleBehaviour
         freePorts.Enqueue(port);
     }
 
-    public Dictionary<string, string> GenerateSceneSpawnInfo(string sceneName)
+    public Dictionary<string, string> GenerateSceneSpawnInfo(RoomInfo info, bool isFirstRoom)
     {
+        var roomCount = roomCounts[info.scene.SceneName].roomCount + 1;
         return new Dictionary<string, string>()
         {
-            { MsfDictKeys.RoomName, roomName + (++sceneCounter) },
-            { MsfDictKeys.SceneName, sceneName },
-            { MsfDictKeys.MapName, sceneName },
-            { MsfDictKeys.MaxPlayers, maxPlayers.ToString() },
+            { MsfDictKeys.RoomName, info.roomName + roomCount.ToString("N0") },
+            { MsfDictKeys.SceneName, info.scene.SceneName },
+            { MsfDictKeys.MapName, info.scene.SceneName },
+            { MsfDictKeys.MaxPlayers, info.maxPlayers.ToString() },
             { MsfDictKeys.IsPublic, "true" },
-            { IsFirstRoomKey, (!spawnFirstRoom).ToString() },
+            { IsFirstRoomKey, (!isFirstRoom).ToString() },
             { AssignPortKey, spawningPort.ToString() },
+            { RoomSpawnTypeKey, RoomSpawnTypeMaster },
         };
     }
 }
