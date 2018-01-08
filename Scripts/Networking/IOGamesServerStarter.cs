@@ -19,7 +19,7 @@ public class IOGamesServerStarter : MonoBehaviour
 
     public LogLevel logLevel = LogLevel.Info;
 
-    public GameNetworkManagerWithMsf networkManager;
+    public SimpleLanNetworkManager networkManager;
 
     [Header("If Spawned Process")]
     [Tooltip("If set to true and if this process is spawned, it will try to " +
@@ -31,7 +31,7 @@ public class IOGamesServerStarter : MonoBehaviour
     public bool startServerAsHost = true;
     public bool autoJoinRoom = true;
     public bool startMaster = true;
-    public MasterServerBehaviour masterServerObject;
+    public MasterServerBehaviour masterServer;
 
     #endregion
 
@@ -43,8 +43,8 @@ public class IOGamesServerStarter : MonoBehaviour
     {
         logger.LogLevel = logLevel;
 
-        masterServerObject = masterServerObject ?? FindObjectOfType<MasterServerBehaviour>();
-        networkManager = networkManager ?? FindObjectOfType<GameNetworkManagerWithMsf>();
+        masterServer = masterServer ?? FindObjectOfType<MasterServerBehaviour>();
+        networkManager = networkManager ?? FindObjectOfType<SimpleLanNetworkManager>();
 
         var connection = GetConnection();
 
@@ -66,7 +66,7 @@ public class IOGamesServerStarter : MonoBehaviour
         if (ShouldStartServerInEditor() && startMaster)
         {
             // If we need to start the master server
-            if (masterServerObject == null)
+            if (masterServer == null)
             {
                 logger.Error("You have selected to start a master server, but there's no " +
                              "master server object in the scene");
@@ -74,11 +74,11 @@ public class IOGamesServerStarter : MonoBehaviour
             }
 
             // Enable master server object
-            masterServerObject.gameObject.SetActive(true);
+            masterServer.gameObject.SetActive(true);
 
             // If auto start in editor is not selected
-            if (!masterServerObject.AutoStartInEditor)
-                masterServerObject.StartServer();
+            if (!masterServer.AutoStartInEditor)
+                masterServer.StartServer();
         }
     }
 
@@ -130,16 +130,22 @@ public class IOGamesServerStarter : MonoBehaviour
                 networkManager.useWebSockets = true;
 
             // Use the assigned port from cmd args
-            // I have problems with Msf assigning port, I will find out better solution later
+            networkManager.networkPort = Msf.Args.AssignedPort;
 
+            // Setup game rules/configs
             var prop = controller.Properties;
-            if (prop.ContainsKey(IOGamesModule.AssignPortKey))
-                networkManager.networkPort = int.Parse(prop[IOGamesModule.AssignPortKey]);
-            else
-                networkManager.networkPort = Msf.Args.AssignedPort;
+            var ioGamesModule = FindObjectOfType<IOGamesModule>();
+            BaseNetworkGameRule gameRule = null;
+            if (prop.ContainsKey(IOGamesModule.GameRuleKey))
+            {
+                gameRule = ioGamesModule.GetGameRule(prop[IOGamesModule.GameRuleKey]);
+                if (gameRule != null)
+                    gameRule.ReadConfigs(prop);
+            }
+            networkManager.gameRule = gameRule;
 
             // Start the server
-            networkManager.StartServerButQuitIfCannotListen();
+            networkManager.StartServerAndQuitIfCannotListen();
         });
         return;
     }
@@ -151,9 +157,9 @@ public class IOGamesServerStarter : MonoBehaviour
         networkManager.maxConnections = 999;
 
         if (startServerAsHost)
-            networkManager.StartHostButQuitIfCannotListen();
+            networkManager.StartHostAndQuitIfCannotListen();
         else
-            networkManager.StartServerButQuitIfCannotListen();
+            networkManager.StartServerAndQuitIfCannotListen();
     }
 
     /// <summary>
