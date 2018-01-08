@@ -129,11 +129,15 @@ public class IOGamesServerStarter : MonoBehaviour
             if (Msf.Args.IsProvided(Msf.Args.Names.WebGl))
                 networkManager.useWebSockets = true;
 
+            var prop = controller.Properties;
             // Use the assigned port from cmd args
-            networkManager.networkPort = Msf.Args.AssignedPort;
+            // I have problems with Msf assigning port, I will find out better solution later
+            if (prop.ContainsKey(IOGamesModule.AssignPortKey))
+                networkManager.networkPort = int.Parse(prop[IOGamesModule.AssignPortKey]);
+            else
+                networkManager.networkPort = Msf.Args.AssignedPort;
 
             // Setup game rules/configs
-            var prop = controller.Properties;
             var ioGamesModule = FindObjectOfType<IOGamesModule>();
             BaseNetworkGameRule gameRule = null;
             if (prop.ContainsKey(IOGamesModule.GameRuleNameKey))
