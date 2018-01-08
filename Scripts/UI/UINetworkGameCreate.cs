@@ -124,9 +124,8 @@ public class UINetworkGameCreate : UIBase
     public override void Show()
     {
         base.Show();
-
-        var masterServer = FindObjectOfType<MasterServerBehaviour>();
-        var ioGamesModule = masterServer.GetModule<IOGamesModule>();
+        
+        var ioGamesModule = FindObjectOfType<IOGamesModule>();
         maps = ioGamesModule.maps;
 
         if (mapList != null)
