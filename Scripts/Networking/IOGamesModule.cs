@@ -9,7 +9,7 @@ public class IOGamesModule : ServerModuleBehaviour
 {
     public const string IsFirstRoomKey = "SpawnFirstRoom";
     public const string RoomSpawnTypeKey = "RoomSpawnType";
-    public const string GameRuleKey = "GameRule";
+    public const string GameRuleNameKey = "GameRuleName";
 
     public const string RoomSpawnTypeMaster = "Master";
     public const string RoomSpawnTypeUser = "User";
@@ -196,7 +196,7 @@ public class IOGamesModule : ServerModuleBehaviour
             { IsFirstRoomKey, isFirstRoom.ToString() },
             { RoomSpawnTypeKey, RoomSpawnTypeMaster },
             { BaseNetworkGameRule.BotCountKey, info.botCount.ToString() },
-            { GameRuleKey, info.gameRule == null ? "" : info.gameRule.name },
+            { GameRuleNameKey, info.gameRule == null ? "" : info.gameRule.name },
         };
     }
 

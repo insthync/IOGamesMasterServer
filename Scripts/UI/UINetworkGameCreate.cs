@@ -47,7 +47,7 @@ public class UINetworkGameCreate : UIBase
             { IOGamesModule.RoomSpawnTypeKey, IOGamesModule.RoomSpawnTypeUser },
             { BaseNetworkGameRule.BotCountKey, botCount.ToString() },
             { BaseNetworkGameRule.MatchTimeKey, matchTime.ToString() },
-            { IOGamesModule.GameRuleKey, gameRuleName },
+            { IOGamesModule.GameRuleNameKey, gameRuleName },
         };
 
         Msf.Client.Spawners.RequestSpawn(settings, "", (requestController, errorMsg) =>

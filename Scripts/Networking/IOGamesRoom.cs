@@ -84,6 +84,7 @@ public class IOGamesRoom : NetworkBehaviour
 
     protected bool isFirstRoom;
     protected string roomType;
+    protected string gameRuleName;
 
     protected virtual void Awake()
     {
@@ -167,6 +168,9 @@ public class IOGamesRoom : NetworkBehaviour
 
             if (prop.ContainsKey(IOGamesModule.RoomSpawnTypeKey))
                 roomType = prop[IOGamesModule.RoomSpawnTypeKey];
+
+            if (prop.ContainsKey(IOGamesModule.GameRuleNameKey))
+                gameRuleName = prop[IOGamesModule.GameRuleNameKey];
         }
 
         // Override the public address
@@ -200,6 +204,7 @@ public class IOGamesRoom : NetworkBehaviour
                 { MsfDictKeys.MapName, mapName },
                 { MsfDictKeys.SceneName, SceneManager.GetActiveScene().name },
                 { IOGamesModule.RoomSpawnTypeKey, roomType },
+                { IOGamesModule.GameRuleNameKey, gameRuleName },
             }
         };
 

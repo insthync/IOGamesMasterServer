@@ -136,9 +136,9 @@ public class IOGamesServerStarter : MonoBehaviour
             var prop = controller.Properties;
             var ioGamesModule = FindObjectOfType<IOGamesModule>();
             BaseNetworkGameRule gameRule = null;
-            if (prop.ContainsKey(IOGamesModule.GameRuleKey))
+            if (prop.ContainsKey(IOGamesModule.GameRuleNameKey))
             {
-                gameRule = ioGamesModule.GetGameRule(prop[IOGamesModule.GameRuleKey]);
+                gameRule = ioGamesModule.GetGameRule(prop[IOGamesModule.GameRuleNameKey]);
                 if (gameRule != null)
                     gameRule.ReadConfigs(prop);
             }
