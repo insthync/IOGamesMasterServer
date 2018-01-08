@@ -7,9 +7,9 @@ using Barebones.MasterServer;
 
 public class IOGamesModule : ServerModuleBehaviour
 {
-    public const string RoomSpawnTypeKey = "RoomSpawnType";
     public const string IsFirstRoomKey = "SpawnFirstRoom";
-    public const string AssignPortKey = "AssignPort";
+    public const string RoomSpawnTypeKey = "RoomSpawnType";
+    public const string GameRuleKey = "GameRule";
 
     public const string RoomSpawnTypeMaster = "Master";
     public const string RoomSpawnTypeUser = "User";
@@ -21,6 +21,17 @@ public class IOGamesModule : ServerModuleBehaviour
         public string roomName = "Battle-";
         public int maxPlayers = 32;
         public int playersAmountToCreateNewRoom = 24;
+        public int botCount;
+        public BaseNetworkGameRule gameRule;
+    }
+
+    [System.Serializable]
+    public class MapSelection
+    {
+        public string mapName;
+        public SceneField scene;
+        public Sprite previewImage;
+        public BaseNetworkGameRule[] availableGameRules;
     }
 
     public class RoomCounter
@@ -40,10 +51,12 @@ public class IOGamesModule : ServerModuleBehaviour
     }
 
     public RoomInfo[] roomInfos;
+    public MapSelection[] maps;
     public float countPlayersToCreateNewRoomDuration = 3;
     private RoomsModule roomsModule;
     private SpawnersModule spawnersModule;
     private readonly Dictionary<string, RoomCounter> roomCounts = new Dictionary<string, RoomCounter>();
+    private readonly Dictionary<string, BaseNetworkGameRule> gameRules = new Dictionary<string, BaseNetworkGameRule>();
 
     private void Awake()
     {
@@ -60,6 +73,21 @@ public class IOGamesModule : ServerModuleBehaviour
         // Register dependencies
         AddDependency<RoomsModule>();
         AddDependency<SpawnersModule>();
+
+        gameRules.Clear();
+        for (var i = 0; i < maps.Length; ++i)
+        {
+            var map = maps[i];
+            if (map != null)
+            {
+                for (var j = 0; j < map.availableGameRules.Length; ++j)
+                {
+                    var availableGameRule = map.availableGameRules[j];
+                    if (availableGameRule != null)
+                        gameRules[availableGameRule.name] = availableGameRule;
+                }
+            }
+        }
     }
 
     private void Start()
@@ -73,7 +101,7 @@ public class IOGamesModule : ServerModuleBehaviour
                 roomCounts[sceneName] = new RoomCounter();
             }
         }
-        
+
         if (Msf.Args.IsProvided(Msf.Args.Names.LoadScene))
             SceneManager.LoadScene(Msf.Args.LoadScene);
         else
@@ -167,6 +195,15 @@ public class IOGamesModule : ServerModuleBehaviour
             { MsfDictKeys.IsPublic, true.ToString() },
             { IsFirstRoomKey, isFirstRoom.ToString() },
             { RoomSpawnTypeKey, RoomSpawnTypeMaster },
+            { BaseNetworkGameRule.BotCountKey, info.botCount.ToString() },
+            { GameRuleKey, info.gameRule == null ? "" : info.gameRule.name },
         };
+    }
+
+    public BaseNetworkGameRule GetGameRule(string gameRuleName)
+    {
+        BaseNetworkGameRule result = null;
+        gameRules.TryGetValue(gameRuleName, out result);
+        return result;
     }
 }
