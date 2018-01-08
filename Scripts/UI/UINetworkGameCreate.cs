@@ -8,34 +8,46 @@ using Barebones.MasterServer;
 
 public class UINetworkGameCreate : UIBase
 {
-    [System.Serializable]
-    public class MapSelection
-    {
-        public string mapName;
-        public SceneField scene;
-        public Sprite previewImage;
-    }
     public int maxPlayerCustomizable = 32;
     public InputField inputRoomName;
     public InputField inputMaxPlayer;
+    public InputField inputBotCount;
+    public InputField inputMatchTime;
     public Image previewImage;
-    public MapSelection[] maps;
+    [Header("Map list")]
     public Dropdown mapList;
+    [Header("Game rule list")]
+    public Dropdown gameRuleList;
     public CreateGameProgressUi uiCreateGameProgress;
+
+    private IOGamesModule.MapSelection[] maps;
+    private BaseNetworkGameRule[] gameRules;
 
     public void OnClickCreateGame()
     {
         uiCreateGameProgress = uiCreateGameProgress ?? FindObjectOfType<CreateGameProgressUi>();
+
         var selectedMap = GetSelectedMap();
+        var selectedGameRule = GetSelectedGameRule();
+
+        if (selectedMap == null)
+            return;
+
+        var botCount = inputBotCount == null ? 0 : int.Parse(inputBotCount.text);
+        var matchTime = inputMatchTime == null ? 0 : int.Parse(inputMatchTime.text);
+        var gameRuleName = selectedGameRule == null ? "" : selectedGameRule.name;
 
         var settings = new Dictionary<string, string> {
-            { MsfDictKeys.RoomName, inputRoomName.text },
+            { MsfDictKeys.RoomName, inputRoomName == null ? "" : inputRoomName.text },
             { MsfDictKeys.SceneName, selectedMap.scene.SceneName },
             { MsfDictKeys.MapName, selectedMap.scene.SceneName },
-            { MsfDictKeys.MaxPlayers, inputMaxPlayer.text },
+            { MsfDictKeys.MaxPlayers, inputMaxPlayer == null ? "0" : inputMaxPlayer.text },
             { MsfDictKeys.IsPublic, true.ToString() },
             { IOGamesModule.IsFirstRoomKey, false.ToString() },
             { IOGamesModule.RoomSpawnTypeKey, IOGamesModule.RoomSpawnTypeUser },
+            { BaseNetworkGameRule.BotCountKey, botCount.ToString() },
+            { BaseNetworkGameRule.MatchTimeKey, matchTime.ToString() },
+            { IOGamesModule.GameRuleKey, gameRuleName },
         };
 
         Msf.Client.Spawners.RequestSpawn(settings, "", (requestController, errorMsg) =>
@@ -53,6 +65,9 @@ public class UINetworkGameCreate : UIBase
 
     public void OnMapListChange(int value)
     {
+        if (gameRuleList != null)
+            gameRuleList.ClearOptions();
+
         var selected = GetSelectedMap();
 
         if (selected == null)
@@ -62,6 +77,41 @@ public class UINetworkGameCreate : UIBase
         }
 
         previewImage.sprite = selected.previewImage;
+        gameRules = selected.availableGameRules;
+
+        if (gameRuleList != null)
+        {
+            gameRuleList.AddOptions(gameRules.Select(a => new Dropdown.OptionData(a.Title)).ToList());
+            gameRuleList.onValueChanged.RemoveListener(OnGameRuleListChange);
+            gameRuleList.onValueChanged.AddListener(OnGameRuleListChange);
+        }
+
+        OnGameRuleListChange(0);
+    }
+
+    public void OnGameRuleListChange(int value)
+    {
+        var selected = GetSelectedGameRule();
+
+        if (selected == null)
+        {
+            Debug.LogError("Invalid game rule selection");
+            return;
+        }
+    }
+
+    public void OnBotCountChanged(string value)
+    {
+        int botCount = 0;
+        if (!int.TryParse(value, out botCount))
+            inputBotCount.text = botCount.ToString();
+    }
+
+    public void OnMatchTimeChanged(string value)
+    {
+        int matchTime = 0;
+        if (!int.TryParse(value, out matchTime))
+            inputBotCount.text = matchTime.ToString();
     }
 
     public void OnMaxPlayerChanged(string value)
@@ -75,22 +125,54 @@ public class UINetworkGameCreate : UIBase
     {
         base.Show();
 
-        mapList.ClearOptions();
-        mapList.AddOptions(maps.Select(m => new Dropdown.OptionData(m.mapName)).ToList());
-        mapList.onValueChanged.RemoveListener(OnMapListChange);
-        mapList.onValueChanged.AddListener(OnMapListChange);
+        var masterServer = FindObjectOfType<MasterServerBehaviour>();
+        var ioGamesModule = masterServer.GetModule<IOGamesModule>();
+        maps = ioGamesModule.maps;
 
-        inputMaxPlayer.contentType = InputField.ContentType.IntegerNumber;
-        inputMaxPlayer.text = maxPlayerCustomizable.ToString();
-        inputMaxPlayer.onValueChanged.RemoveListener(OnMaxPlayerChanged);
-        inputMaxPlayer.onValueChanged.AddListener(OnMaxPlayerChanged);
+        if (mapList != null)
+        {
+            mapList.ClearOptions();
+            mapList.AddOptions(maps.Select(m => new Dropdown.OptionData(m.mapName)).ToList());
+            mapList.onValueChanged.RemoveListener(OnMapListChange);
+            mapList.onValueChanged.AddListener(OnMapListChange);
+        }
+
+        if (inputMaxPlayer != null)
+        {
+            inputMaxPlayer.contentType = InputField.ContentType.IntegerNumber;
+            inputMaxPlayer.text = maxPlayerCustomizable.ToString();
+            inputMaxPlayer.onValueChanged.RemoveListener(OnMaxPlayerChanged);
+            inputMaxPlayer.onValueChanged.AddListener(OnMaxPlayerChanged);
+        }
+
+        if (inputBotCount != null)
+        {
+            inputBotCount.contentType = InputField.ContentType.IntegerNumber;
+            inputBotCount.text = "0";
+            inputBotCount.onValueChanged.RemoveListener(OnBotCountChanged);
+            inputBotCount.onValueChanged.AddListener(OnBotCountChanged);
+        }
+
+        if (inputMatchTime != null)
+        {
+            inputMatchTime.contentType = InputField.ContentType.IntegerNumber;
+            inputMatchTime.text = "0";
+            inputMatchTime.onValueChanged.RemoveListener(OnMatchTimeChanged);
+            inputMatchTime.onValueChanged.AddListener(OnMatchTimeChanged);
+        }
 
         OnMapListChange(0);
     }
 
-    public MapSelection GetSelectedMap()
+    public IOGamesModule.MapSelection GetSelectedMap()
     {
         var text = mapList.captionText.text;
         return maps.FirstOrDefault(m => m.mapName == text);
+    }
+
+    public BaseNetworkGameRule GetSelectedGameRule()
+    {
+        var text = gameRuleList.captionText.text;
+        return gameRules.FirstOrDefault(m => m.Title == text);
     }
 }
