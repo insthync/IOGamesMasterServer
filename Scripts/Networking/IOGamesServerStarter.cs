@@ -19,7 +19,7 @@ public class IOGamesServerStarter : MonoBehaviour
 
     public LogLevel logLevel = LogLevel.Info;
 
-    public SimpleLanNetworkManager networkManager;
+    public BaseNetworkGameManager networkManager;
 
     [Header("If Spawned Process")]
     [Tooltip("If set to true and if this process is spawned, it will try to " +
@@ -44,7 +44,7 @@ public class IOGamesServerStarter : MonoBehaviour
         logger.LogLevel = logLevel;
 
         masterServer = masterServer ?? FindObjectOfType<MasterServerBehaviour>();
-        networkManager = networkManager ?? FindObjectOfType<SimpleLanNetworkManager>();
+        networkManager = networkManager ?? FindObjectOfType<BaseNetworkGameManager>();
 
         var connection = GetConnection();
 
