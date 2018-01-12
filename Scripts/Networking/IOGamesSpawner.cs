@@ -53,10 +53,7 @@ public class IOGamesSpawner : SpawnerBehaviour
         if (freePorts.Count > 0)
             spawningPort = freePorts.Dequeue();
         else
-        {
-            ++portCounter;
-            spawningPort = portCounter;
-        }
+            spawningPort = portCounter++;
 
         var port = spawningPort;
 
