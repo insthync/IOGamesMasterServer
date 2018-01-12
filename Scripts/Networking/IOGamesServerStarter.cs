@@ -131,11 +131,7 @@ public class IOGamesServerStarter : MonoBehaviour
 
             var prop = controller.Properties;
             // Use the assigned port from cmd args
-            // I have problems with Msf assigning port, I will find out better solution later
-            if (prop.ContainsKey(IOGamesModule.AssignPortKey))
-                networkManager.networkPort = int.Parse(prop[IOGamesModule.AssignPortKey]);
-            else
-                networkManager.networkPort = Msf.Args.AssignedPort;
+            networkManager.networkPort = Msf.Args.AssignedPort;
 
             // Setup game rules/configs
             var ioGamesModule = FindObjectOfType<IOGamesModule>();
