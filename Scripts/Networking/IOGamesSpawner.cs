@@ -24,8 +24,16 @@ public class IOGamesSpawner : SpawnerBehaviour
             Destroy(gameObject);
             return;
         }
+        if (transform.parent != null)
+            transform.SetParent(null, false);
         DontDestroyOnLoad(gameObject);
         Instance = this;
+    }
+
+    protected override void OnDestroy()
+    {
+        if (_connection != null)
+            _connection.RemoveConnectionListener(OnConnectedToMaster);
     }
 
     protected override void OnConnectedToMaster()
