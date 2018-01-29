@@ -49,6 +49,8 @@ public class IOGamesSpawner : SpawnerBehaviour
 
         if (AutoStartInEditor && Msf.Runtime.IsEditor)
         {
+            spawningPort = startPort;
+            portCounter = startPort;
             StartSpawner();
         }
     }
