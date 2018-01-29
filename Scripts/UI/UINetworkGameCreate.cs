@@ -11,12 +11,22 @@ public class UINetworkGameCreate : UIBase
     public int maxPlayerCustomizable = 32;
     public InputField inputRoomName;
     public InputField inputMaxPlayer;
+    [Header("Match Bot Count")]
+    public GameObject containerBotCount;
     public InputField inputBotCount;
+    [Header("Match Time")]
+    public GameObject containerMatchTime;
     public InputField inputMatchTime;
+    [Header("Match Kill")]
+    public GameObject containerMatchKill;
+    public InputField inputMatchKill;
+    [Header("Match Score")]
+    public GameObject containerMatchScore;
+    public InputField inputMatchScore;
+    [Header("Maps")]
     public Image previewImage;
-    [Header("Map list")]
     public Dropdown mapList;
-    [Header("Game rule list")]
+    [Header("Game rules")]
     public Dropdown gameRuleList;
     public CreateGameProgressUi uiCreateGameProgress;
 
@@ -98,6 +108,18 @@ public class UINetworkGameCreate : UIBase
             Debug.LogError("Invalid game rule selection");
             return;
         }
+
+        if (containerBotCount != null)
+            containerBotCount.SetActive(selected.HasOptionBotCount);
+
+        if (containerMatchTime != null)
+            containerMatchTime.SetActive(selected.HasOptionMatchTime);
+
+        if (containerMatchKill != null)
+            containerMatchKill.SetActive(selected.HasOptionMatchKill);
+
+        if (containerMatchScore != null)
+            containerMatchScore.SetActive(selected.HasOptionMatchScore);
     }
 
     public void OnBotCountChanged(string value)
