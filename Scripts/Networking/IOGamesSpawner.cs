@@ -8,6 +8,7 @@ using Barebones.Networking;
 
 public class IOGamesSpawner : SpawnerBehaviour
 {
+    public static new IOGamesSpawner Instance { get; protected set; }
     public int startPort = 1500;
     private int spawningPort = -1;
     private int portCounter = -1;
@@ -15,6 +16,17 @@ public class IOGamesSpawner : SpawnerBehaviour
 
     private static object _processLock = new object();
     private static Dictionary<int, Process> _processes = new Dictionary<int, Process>();
+
+    protected override void Awake()
+    {
+        if (Instance != null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        DontDestroyOnLoad(gameObject);
+        Instance = this;
+    }
 
     protected override void OnConnectedToMaster()
     {
