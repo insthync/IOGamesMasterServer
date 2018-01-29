@@ -43,8 +43,14 @@ public class UINetworkGameCreate : UIBase
         if (selectedMap == null)
             return;
 
-        var botCount = inputBotCount == null ? 0 : int.Parse(inputBotCount.text);
-        var matchTime = inputMatchTime == null ? 0 : int.Parse(inputMatchTime.text);
+        var defaultBotCount = selectedGameRule == null ? 0 : selectedGameRule.DefaultBotCount;
+        var defaultMatchTime = selectedGameRule == null ? 0 : selectedGameRule.DefaultMatchTime;
+        var defaultMatchKill = selectedGameRule == null ? 0 : selectedGameRule.DefaultMatchKill;
+        var defaultMatchScore = selectedGameRule == null ? 0 : selectedGameRule.DefaultMatchScore;
+        var botCount = inputBotCount == null ? defaultBotCount : int.Parse(inputBotCount.text);
+        var matchTime = inputMatchTime == null ? defaultMatchTime : int.Parse(inputMatchTime.text);
+        var matchKill = inputMatchKill == null ? defaultMatchKill : int.Parse(inputMatchKill.text);
+        var matchScore = inputMatchScore == null ? defaultMatchScore : int.Parse(inputMatchScore.text);
         var gameRuleName = selectedGameRule == null ? "" : selectedGameRule.name;
 
         var settings = new Dictionary<string, string> {
@@ -57,6 +63,8 @@ public class UINetworkGameCreate : UIBase
             { IOGamesModule.RoomSpawnTypeKey, IOGamesModule.RoomSpawnTypeUser },
             { BaseNetworkGameRule.BotCountKey, botCount.ToString() },
             { BaseNetworkGameRule.MatchTimeKey, matchTime.ToString() },
+            { BaseNetworkGameRule.MatchKillKey, matchKill.ToString() },
+            { BaseNetworkGameRule.MatchScoreKey, matchScore.ToString() },
             { IOGamesModule.GameRuleNameKey, gameRuleName },
         };
 
@@ -120,6 +128,45 @@ public class UINetworkGameCreate : UIBase
 
         if (containerMatchScore != null)
             containerMatchScore.SetActive(selected.HasOptionMatchScore);
+
+        if (inputBotCount != null)
+        {
+            inputBotCount.contentType = InputField.ContentType.IntegerNumber;
+            inputBotCount.text = selected.DefaultBotCount.ToString();
+            inputBotCount.onValueChanged.RemoveListener(OnBotCountChanged);
+            inputBotCount.onValueChanged.AddListener(OnBotCountChanged);
+        }
+
+        if (inputMatchTime != null)
+        {
+            inputMatchTime.contentType = InputField.ContentType.IntegerNumber;
+            inputMatchTime.text = selected.DefaultMatchTime.ToString();
+            inputMatchTime.onValueChanged.RemoveListener(OnMatchTimeChanged);
+            inputMatchTime.onValueChanged.AddListener(OnMatchTimeChanged);
+        }
+
+        if (inputMatchKill != null)
+        {
+            inputMatchKill.contentType = InputField.ContentType.IntegerNumber;
+            inputMatchKill.text = selected.DefaultMatchKill.ToString();
+            inputMatchKill.onValueChanged.RemoveListener(OnMatchKillChanged);
+            inputMatchKill.onValueChanged.AddListener(OnMatchKillChanged);
+        }
+
+        if (inputMatchScore != null)
+        {
+            inputMatchScore.contentType = InputField.ContentType.IntegerNumber;
+            inputMatchScore.text = selected.DefaultMatchScore.ToString();
+            inputMatchScore.onValueChanged.RemoveListener(OnMatchScoreChanged);
+            inputMatchScore.onValueChanged.AddListener(OnMatchScoreChanged);
+        }
+    }
+
+    public void OnMaxPlayerChanged(string value)
+    {
+        int maxPlayer = maxPlayerCustomizable;
+        if (!int.TryParse(value, out maxPlayer) || maxPlayer > maxPlayerCustomizable)
+            inputMaxPlayer.text = maxPlayer.ToString();
     }
 
     public void OnBotCountChanged(string value)
@@ -133,14 +180,21 @@ public class UINetworkGameCreate : UIBase
     {
         int matchTime = 0;
         if (!int.TryParse(value, out matchTime))
-            inputBotCount.text = matchTime.ToString();
+            inputMatchTime.text = matchTime.ToString();
     }
 
-    public void OnMaxPlayerChanged(string value)
+    public void OnMatchKillChanged(string value)
     {
-        int maxPlayer = maxPlayerCustomizable;
-        if (!int.TryParse(value, out maxPlayer) || maxPlayer > maxPlayerCustomizable)
-            inputMaxPlayer.text = maxPlayer.ToString();
+        int matchKill = 0;
+        if (!int.TryParse(value, out matchKill))
+            inputMatchKill.text = matchKill.ToString();
+    }
+
+    public void OnMatchScoreChanged(string value)
+    {
+        int matchScore = 0;
+        if (!int.TryParse(value, out matchScore))
+            inputMatchScore.text = matchScore.ToString();
     }
 
     public override void Show()
@@ -164,22 +218,6 @@ public class UINetworkGameCreate : UIBase
             inputMaxPlayer.text = maxPlayerCustomizable.ToString();
             inputMaxPlayer.onValueChanged.RemoveListener(OnMaxPlayerChanged);
             inputMaxPlayer.onValueChanged.AddListener(OnMaxPlayerChanged);
-        }
-
-        if (inputBotCount != null)
-        {
-            inputBotCount.contentType = InputField.ContentType.IntegerNumber;
-            inputBotCount.text = "0";
-            inputBotCount.onValueChanged.RemoveListener(OnBotCountChanged);
-            inputBotCount.onValueChanged.AddListener(OnBotCountChanged);
-        }
-
-        if (inputMatchTime != null)
-        {
-            inputMatchTime.contentType = InputField.ContentType.IntegerNumber;
-            inputMatchTime.text = "0";
-            inputMatchTime.onValueChanged.RemoveListener(OnMatchTimeChanged);
-            inputMatchTime.onValueChanged.AddListener(OnMatchTimeChanged);
         }
 
         OnMapListChange(0);
