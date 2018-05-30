@@ -144,6 +144,9 @@ public class IOGamesServerStarter : MonoBehaviour
             }
             networkManager.gameRule = gameRule;
 
+            if (prop.ContainsKey(MsfDictKeys.MaxPlayers))
+                networkManager.maxConnections = int.Parse(prop[MsfDictKeys.MaxPlayers]);
+
             // Start the server
             networkManager.StartServerAndQuitIfCannotListen();
         });
